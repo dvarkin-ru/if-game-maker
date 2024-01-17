@@ -144,17 +144,19 @@ Button(f, text="Добавить ответ", command=add_ans).pack(fill=X)
 Button(f, text="Удалить ответ", command=del_ans).pack(fill=X)
 
 def save_json():
-    f = asksaveasfile(initialfile = 'room.json',
-                      defaultextension=".json",
-                      filetypes=[("Json комнаты","*.json"),])
-    if not f:
-        return
     try:
+        f = None
+        f = asksaveasfile(initialfile = 'room.json',
+                          defaultextension=".json",
+                          filetypes=[("Json комнаты","*.json"),])
+        if not f:
+            return
         json.dump(d, f, ensure_ascii=False, indent=' ')
     except:
         showerror(title="Ошибка", message="Не удалось сохранить")
     finally:
-        f.close()
+        if f:
+            f.close()
 
 def open_json():
     global d
@@ -205,16 +207,18 @@ def q_content(k, v):
     return res
 
 def save_lua():
-    f = asksaveasfile(initialfile = 'room.lua', defaultextension=".json",
-                      filetypes=[("INSTEAD LUA","*.lua"),])
-    if not f:
-        return
-##    try:
-    syn_lua_file(f)
-##    except:
-##        showerror(title="Ошибка", message="Не удалось сохранить")
-##    finally:
-##        f.close()
+    try:
+        f = None
+        f = asksaveasfile(initialfile = 'room.lua', defaultextension=".json",
+                          filetypes=[("INSTEAD LUA","*.lua"),])
+        if not f:
+            return
+        syn_lua_file(f)
+    except:
+        showerror(title="Ошибка", message="Не удалось сохранить")
+    finally:
+        if f:
+            f.close()
 
 Button(root, text="Сохранить в JSON", command=save_json).pack(fill=X)
 Button(root, text="Открыть JSON", command=open_json).pack(fill=X)
