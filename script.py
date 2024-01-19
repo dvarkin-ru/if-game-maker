@@ -1,32 +1,29 @@
 import json
 import os # TODO: импортозаместить ос
 from tkinter import *
-from tkinter.messagebox import showerror, showwarning, showinfo
+from tkinter.ttk import *
+from tkinter.messagebox import showerror, showwarning, showinfo, askyesno
 from tkinter.filedialog import asksaveasfile, askopenfile
 
 q_id_key, ans_key  = "Вопрос", "Ответы"
 
 def add_dial():
     q_id = entries[q_id_key].get().strip()
-    if d.get(q_id):
-        showerror(title="Ошибка", message="Такой уже есть")
+    if q_id == "":
+        showerror(title="Ошибка", message="Заполните поле Вопрос")
+        return
+    if q_id in d:
+        if askyesno("Совпадение", "Такой вопрос уже есть, обновить его текст?"):
+            d[q_id]["Текст вопроса"] = entries["Текст вопроса"].get().strip()
         return
     box.insert(END, q_id)
     d[q_id] = dict()
-    item_d = d[q_id]
     for k, v in entries.items():
-        item_d[k] = v.get().strip()
+        d[q_id][k] = v.get().strip()
     d[q_id][ans_key] = []
     box.select_clear(0, END)
     box.select_set(END)
     clear_ans()
-
-def upd_dial():
-    q_id = entries[q_id_key].get().strip()
-    if not d.get(q_id):
-        showerror(title="Ошибка", message="Выберите диалог")
-        return
-    d[q_id]["Текст вопроса"] = entries["Текст вопроса"].get().strip()
 
 def del_dial():
     select = list(box.curselection())
@@ -42,15 +39,12 @@ def onselectdial(evt):
     if len(sel)<1:
         return
     selected = box.get(int(sel[0]))
-    for k in entries:
-        entries[k].delete(0, END)
-        entries[k].insert(0, d[selected][k])
-    for k in entries_ans:
-        entries_ans[k].delete(0, END)
+    for k, v in entries.items():
+        v.delete(0, END)
+        v.insert(0, d[selected][k])
     q_id = entries[q_id_key].get()
-    answer_box.delete(0, END)
-    ans = d[q_id][ans_key]
-    for a in ans:
+    clear_ans()
+    for a in d[q_id][ans_key]:
         answer_box.insert(END, a["Текст ответа"])
 
 d = dict()
@@ -75,35 +69,37 @@ for k in entries:
     entries[k] = Entry(f, width=40)
     Label(f, text=k).pack()
     entries[k].pack(fill=X)
-Button(f, text="Добавить диалог", command=add_dial).pack(fill=X)
-Button(f, text="Пересохранить текст вопроса", command=upd_dial).pack(fill=X)
+Button(f, text="Добавить/обновить диалог", command=add_dial).pack(fill=X)
 Button(f, text="Удалить диалог", command=del_dial).pack(fill=X)
 
 def clear_ans():
-    for k in entries_ans:
-        entries_ans[k].delete(0, END)
+    for v in entries_ans.values():
+        v.delete(0, END)
     answer_box.delete(0, END)
 
 def add_ans():
     q_id = entries[q_id_key].get().strip()
-    if q_id == '' or not d.get(q_id):
+    if q_id == '' or q_id not in d:
         showerror(title="Ошибка", message="Выберите диалог")
         return
     ans = entries_ans["Текст ответа"].get().strip()
     oth_ans = [a for a in d[q_id][ans_key] if a["Текст ответа"]==ans]
     if len(oth_ans) > 0:
-        showerror(title="Ошибка", message="Такой уже есть")
+        if askyesno("Совпадение", "Такой ответ уже есть, обновить его?"):
+            for k, v in entries_ans.items():
+                oth_ans[0][k] = v.get().strip()
+                v.delete(0, END)
         return
     answer_box.insert(END, ans)
     item_d = dict()
     d[q_id][ans_key].append(item_d)
     for k, v in entries_ans.items():
         item_d[k] = v.get().strip()
-        entries_ans[k].delete(0, END)
+        v.delete(0, END)
 
 def del_ans():
     q_id = entries[q_id_key].get() #.strip()
-    if q_id == '' or not d.get(q_id):
+    if q_id == '' or q_id not in d:
         showerror(title="Ошибка", message="Выберите диалог")
         return
     answers = d[q_id][ans_key]
@@ -118,12 +114,12 @@ def onselectans(evt):
         return
     selected = int(sel[0])
     q_id = entries[q_id_key].get().strip()
-    if q_id == '' or not d.get(q_id):
+    if q_id == '' or q_id not in d:
         showerror(title="Ошибка", message="Выберите диалог")
         return
-    for k in entries_ans:
-        entries_ans[k].delete(0, END)
-        entries_ans[k].insert(0, d[q_id][ans_key][selected][k])
+    for k, v in entries_ans.items():
+        v.delete(0, END)
+        v.insert(0, d[q_id][ans_key][selected][k])
 
 f = Frame(f_main)
 f.pack(side=LEFT, fill=Y)
@@ -140,7 +136,7 @@ for k in entries_ans:
     entries_ans[k] = Entry(f, width=40)
     Label(f, text=k).pack()
     entries_ans[k].pack(fill=X)
-Button(f, text="Добавить ответ", command=add_ans).pack(fill=X)
+Button(f, text="Добавить/обновить ответ", command=add_ans).pack(fill=X)
 Button(f, text="Удалить ответ", command=del_ans).pack(fill=X)
 
 def save_json():
@@ -152,6 +148,7 @@ def save_json():
         if not f:
             return
         json.dump(d, f, ensure_ascii=False, indent=' ')
+        showinfo("Сохранено", "Сохранено")
     except:
         showerror(title="Ошибка", message="Не удалось сохранить")
     finally:
@@ -175,22 +172,19 @@ def open_json():
         box.insert(END, r)
 
 def syn_lua_file(f):
-    name = os.path.basename(f.name).split(".")[0]
-    dlg = 'dlg {\nnam = "'+name+'";\nphr = {\n\n'+lua_phrases()+"}}"
-    f.write(dlg)
-
-def lua_phrases():
     enter = [(k, v) for k, v in d.items() if k=='вход']
     if len(enter) != 1:
         showerror(title="Ошибка", message="Нет диалога 'вход'")
         raise ValueError
-    res = q_content(*enter[0])
+    res = lua_content(*enter[0])
     for k, v in d.items():
         if k != 'вход':
-            res += q_content(k, v)
-    return res
+            res += lua_content(k, v)
+    name = os.path.basename(f.name).split(".")[0]
+    dlg = 'dlg {\nnam = "'+name+'";\nphr = {\n\n'+res+"}}"
+    f.write(dlg)
 
-def q_content(k, v):
+def lua_content(k, v):
     res = "{"
     if k != 'вход':
         res += "false, "
@@ -203,6 +197,9 @@ def q_content(k, v):
         if a["Действие"] != '':
             res += ", function() "+a["Действие"]+" end"
         res += "},\n"
+        if a["Следующий вопрос"] not in d:
+            showwarning(k, k + " cсылается на несуществующий вопрос: " +
+                        a["Следующий вопрос"] + ".")
     res += '},\n\n'
     return res
 
@@ -214,6 +211,7 @@ def save_lua():
         if not f:
             return
         syn_lua_file(f)
+        showinfo("Сохранено", "Сохранено")
     except:
         showerror(title="Ошибка", message="Не удалось сохранить")
     finally:
@@ -222,6 +220,6 @@ def save_lua():
 
 Button(root, text="Сохранить в JSON", command=save_json).pack(fill=X)
 Button(root, text="Открыть JSON", command=open_json).pack(fill=X)
-Button(root, text="Синтезировать INSTEAD LUA", command=save_lua).pack(fill=X)
+Button(root, text="Экспортировать в INSTEAD LUA", command=save_lua).pack(fill=X)
 
 root.mainloop()
